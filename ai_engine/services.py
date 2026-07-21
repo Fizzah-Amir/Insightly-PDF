@@ -70,7 +70,7 @@ def generate_answer(question, chunks):
     llm = ChatGroq(
         model="llama-3.1-8b-instant",
         temperature=0,
-        groq_api_key=os.getenv("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")
+        groq_api_key=os.getenv("GROQ_API_KEY")
     )
 
     prompt = f"""
