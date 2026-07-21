@@ -6,6 +6,9 @@ from rest_framework import status
 from .tasks import process_document
 from .models import Document, Status
 from .serializers import DocumentSerializer
+from .tasks import process_document
+from rest_framework.generics import RetrieveAPIView
+from ai_engine.models import DocumentChunk
 from ai_engine.services import (
     extract_pdf_text,
     split_documents,
@@ -13,14 +16,11 @@ from ai_engine.services import (
     search_similar_chunks,
     generate_answer,
 )
-
-from ai_engine.models import DocumentChunk
-
-
 class DocumentUploadAPIView(APIView):
-    
+
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+
 
     def post(self, request):
 
@@ -33,43 +33,19 @@ class DocumentUploadAPIView(APIView):
                 status=Status.PROCESSING
             )
 
-            pdf_path = document.file.path
 
-            try:
-                documents = extract_pdf_text(pdf_path)
+            # Background task start
+            process_document.delay(document.id)
 
-                chunks = split_documents(documents)
 
-                embeddings = generate_embeddings(chunks)
-
-                for chunk, embedding in zip(chunks, embeddings):
-                    DocumentChunk.objects.create(
-                        document=document,
-                        content=chunk.page_content,
-                        embedding=embedding
-                    )
-
-                document.status = Status.COMPLETED
-                document.save()
-
-                return Response({
-                    "message": "PDF uploaded and processed successfully",
+            return Response(
+                {
+                    "message": "PDF uploaded. Processing started.",
                     "document_id": document.id,
-                    "chunks_created": len(chunks)
-                })
-
-            except Exception as e:
-
-                document.status = Status.FAILED
-                document.save()
-
-                return Response(
-                    {
-                        "error": "PDF processing failed",
-                        "details": str(e)
-                    },
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                    "status": "processing"
+                },
+                status=status.HTTP_201_CREATED
+            )
 
 
         return Response(
@@ -142,3 +118,6 @@ class DocumentDeleteAPIView(APIView):
             },
             status=status.HTTP_204_NO_CONTENT
         )
+class DocumentDetailAPIView(RetrieveAPIView):
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
