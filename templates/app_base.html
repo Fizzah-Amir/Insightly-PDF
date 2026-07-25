@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">DocuMind AI</div>
+    <div class="brand-sub">Study companion</div>
+
+    <nav class="nav-group">
+      <a href="{% url 'web_document_list' %}" class="nav-link {% if active_nav == 'documents' %}active{% endif %}">Documents</a>
+      <a href="{% url 'web_document_upload' %}" class="nav-link {% if active_nav == 'upload' %}active{% endif %}">Upload PDF</a>
+      <a href="{% url 'web_compare' %}" class="nav-link {% if active_nav == 'compare' %}active{% endif %}">Compare</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">{{ request.user.username }}</div>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm">Log out</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

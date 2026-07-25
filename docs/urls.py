@@ -4,7 +4,8 @@ from .views import (
     DocumentAskAPIView,
     DocumentListAPIView,
     DocumentDetailAPIView,
-    DocumentDeleteAPIView
+    DocumentDeleteAPIView,
+    DocumentCompareAPIView
 )
 
 urlpatterns = [
@@ -12,6 +13,10 @@ urlpatterns = [
     path(
         "upload/",
         DocumentUploadAPIView.as_view()
+    ),
+    path(
+        "compare/",
+        DocumentCompareAPIView.as_view()
     ),
     path(
     "<int:document_id>/ask/",

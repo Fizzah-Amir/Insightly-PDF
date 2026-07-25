@@ -1,0 +1,28 @@
+{% extends "app_base.html" %}
+{% block title %}Concepts — {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="page-eyebrow">
+  <a href="{% url 'web_document_detail' document.id %}" style="color:inherit; text-decoration:none;">&larr; {{ document.title }}</a>
+</div>
+<h1>Extracted concepts</h1>
+<p>Key ideas DocuMind found on each page. Great for a quick pre-exam skim.</p>
+
+<div class="card mt-24">
+  {% if grouped %}
+    {% for group in grouped %}
+      <div class="concept-page-group">
+        <span class="concept-page-label">Page {{ group.page_number }}</span>
+        {% for concept in group.concepts %}
+          <span class="concept-chip">{{ concept.name }}</span>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <h3>No concepts extracted yet</h3>
+      <p>This runs automatically shortly after upload. Check back in a moment.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

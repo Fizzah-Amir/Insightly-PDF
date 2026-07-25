@@ -1,0 +1,43 @@
+{% extends "app_base.html" %}
+{% block title %}Documents — DocuMind AI{% endblock %}
+
+{% block content %}
+<div class="page-eyebrow">Your library</div>
+<div class="flex-between">
+  <h1 class="mb-0">Documents</h1>
+  <a href="{% url 'web_document_upload' %}" class="btn btn-primary">+ Upload PDF</a>
+</div>
+
+<div class="card mt-24">
+  {% if documents %}
+    {% for document in documents %}
+      <div class="doc-row">
+        <div>
+          <a href="{% url 'web_document_detail' document.id %}" class="doc-title">{{ document.title }}</a>
+          <div class="doc-meta">
+            uploaded {{ document.uploaded_at|date:"d M Y, H:i" }}
+            &middot;
+            <span class="badge badge-{{ document.status }}">{{ document.get_status_display }}</span>
+          </div>
+        </div>
+        <div class="doc-actions">
+          {% if document.status == "completed" %}
+            <a href="{% url 'web_document_detail' document.id %}" class="btn btn-ghost btn-sm">Ask</a>
+            <a href="{% url 'web_concepts' document.id %}" class="btn btn-ghost btn-sm">Concepts</a>
+          {% endif %}
+          <form method="post" action="{% url 'web_document_delete' document.id %}" onsubmit="return confirm('Delete this document? This cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <h3>No documents yet</h3>
+      <p>Upload a PDF to start asking it questions.</p>
+      <a href="{% url 'web_document_upload' %}" class="btn btn-primary mt-24">Upload your first PDF</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

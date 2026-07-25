@@ -13,6 +13,11 @@ class DocumentChunk(models.Model):
 
     content = models.TextField()
 
+    page_number = models.IntegerField(
+        null=True,
+        blank=True
+    )
+
     embedding = VectorField(
         dimensions=384,
         null=True,
@@ -27,5 +32,6 @@ def save_chunks_with_embeddings(chunks, embeddings, document):
         DocumentChunk.objects.create(
             document=document,
             content=chunk.page_content,
+            page_number=chunk.metadata.get("page"),
             embedding=embedding
         )

@@ -1,0 +1,52 @@
+{% extends "app_base.html" %}
+{% block title %}{{ document.title }} — DocuMind AI{% endblock %}
+
+{% block content %}
+<div class="page-eyebrow">
+  <a href="{% url 'web_document_list' %}" style="color:inherit; text-decoration:none;">&larr; Documents</a>
+</div>
+
+<div class="flex-between">
+  <h1 class="mb-0">{{ document.title }}</h1>
+  <span class="badge badge-{{ document.status }}">{{ document.get_status_display }}</span>
+</div>
+<div class="doc-meta mt-24" style="margin-bottom: 20px;">uploaded {{ document.uploaded_at|date:"d M Y, H:i" }}</div>
+
+{% if document.status != "completed" %}
+  <div class="alert alert-info">
+    This document is still processing. Refresh this page in a moment — asking questions and concepts will be available once it's done.
+  </div>
+{% else %}
+
+  <a href="{% url 'web_concepts' document.id %}" class="btn btn-ghost btn-sm mt-24">View extracted concepts →</a>
+
+  <div class="card mt-24">
+    <h2>Ask this document</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <textarea name="question" placeholder="e.g. What is the main argument of this paper?" required>{{ question|default:"" }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Ask</button>
+    </form>
+  </div>
+
+  {% if answer %}
+    <div class="paper mt-24">
+      <div class="page-eyebrow" style="color:#8a6d2b;">Question</div>
+      <p style="color:var(--text-on-parchment-muted); font-style: italic;">{{ question }}</p>
+      <div class="page-eyebrow" style="color:#8a6d2b; margin-top: 16px;">Answer</div>
+      <h3 style="font-family: var(--font-body); font-weight: 500; font-size: 1rem; line-height: 1.6;">{{ answer }}</h3>
+
+      {% if sources %}
+        <div class="citations">
+          {% for page in sources %}
+            <span class="citation-tab">p.{{ page }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% endif %}
+{% endblock %}

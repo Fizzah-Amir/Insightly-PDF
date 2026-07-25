@@ -1,0 +1,71 @@
+{% extends "app_base.html" %}
+{% block title %}Compare — DocuMind AI{% endblock %}
+
+{% block content %}
+<div class="page-eyebrow">Cross-document reasoning</div>
+<h1>Compare documents</h1>
+<p>Pick 2 or more completed documents and ask a question — DocuMind will find where they agree, where they contradict, and what's unique to each.</p>
+
+{% if documents.count < 2 %}
+  <div class="alert alert-info mt-24">You need at least 2 fully processed documents to compare. Upload another one first.</div>
+{% else %}
+
+<div class="card mt-24">
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label>Select documents</label>
+      {% for document in documents %}
+        <div class="checkbox-row" style="margin-bottom: 8px;">
+          <input type="checkbox" name="document_ids" value="{{ document.id }}" id="doc_{{ document.id }}"
+            {% if document.id|stringformat:"s" in selected_ids %}checked{% endif %}>
+          <label for="doc_{{ document.id }}" style="margin:0; font-family: var(--font-body); color: var(--text); font-size: 0.9rem;">{{ document.title }}</label>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="field">
+      <label for="id_question">Question</label>
+      <textarea name="question" id="id_question" placeholder="e.g. What do these documents say about the methodology?" required>{{ question|default:"" }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Compare</button>
+  </form>
+</div>
+
+{% if result %}
+  <div class="card mt-24">
+    <h2>Results</h2>
+    <div class="compare-grid">
+      <div class="compare-col agree">
+        <h3>Agreements</h3>
+        {% for item in result.agreements %}
+          <div class="compare-item">{{ item }}</div>
+        {% empty %}
+          <p>None found.</p>
+        {% endfor %}
+      </div>
+      <div class="compare-col contradict">
+        <h3>Contradictions</h3>
+        {% for item in result.contradictions %}
+          <div class="compare-item">{{ item }}</div>
+        {% empty %}
+          <p>None found.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if result.unique_points %}
+      <h3 class="mt-24">Unique to each document</h3>
+      {% for doc_label, points in result.unique_points.items %}
+        <div class="mt-24">
+          <span class="concept-page-label">{{ doc_label }}</span>
+          {% for point in points %}
+            <div class="compare-item">{{ point }}</div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

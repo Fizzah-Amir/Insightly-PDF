@@ -26,7 +26,9 @@ SECRET_KEY = 'django-insecure-twz0=s9+ej@%j-t^289k-0&45-@7$i8#+$xif^vuk+z571lodg
 DEBUG = True
 
 ALLOWED_HOSTS = []
-LOGIN_REDIRECT_URL = "/api/documents/upload/"
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/app/documents/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 # Application definition
 CELERY_BROKER_URL = "redis://localhost:6379/0"
@@ -58,20 +60,6 @@ MIDDLEWARE = [
 AUTH_USER_MODEL="users.User"
 ROOT_URLCONF = 'config.urls'
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -127,6 +115,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.BrowsableAPIRenderer",
@@ -136,3 +125,17 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
 }
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]

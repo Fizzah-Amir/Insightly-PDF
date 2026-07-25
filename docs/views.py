@@ -15,6 +15,7 @@ from ai_engine.services import (
     generate_embeddings,
     search_similar_chunks,
     generate_answer,
+    compare_documents,
 )
 class DocumentUploadAPIView(APIView):
 
@@ -64,14 +65,15 @@ class DocumentAskAPIView(APIView):
             document_id
         )
 
-        answer = generate_answer(
+        result = generate_answer(
             question,
             chunks
         )
 
         return Response({
             "question": question,
-            "answer": answer
+            "answer": result["answer"],
+            "sources": result["sources"]
         })
 class DocumentListAPIView(APIView):
 
@@ -121,3 +123,53 @@ class DocumentDeleteAPIView(APIView):
 class DocumentDetailAPIView(RetrieveAPIView):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
+class DocumentCompareAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        question = request.data.get("question")
+        document_ids = request.data.get("document_ids")
+
+        if not question:
+            return Response(
+                {"error": "question is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not document_ids or not isinstance(document_ids, list) or len(document_ids) < 2:
+            return Response(
+                {"error": "document_ids must be a list of at least 2 document ids"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Ownership check: only compare documents the user actually owns,
+        # and only ones that finished processing.
+        owned_documents = Document.objects.filter(
+            id__in=document_ids,
+            owner=request.user,
+            status=Status.COMPLETED
+        )
+
+        owned_ids = list(owned_documents.values_list("id", flat=True))
+
+        missing_ids = set(document_ids) - set(owned_ids)
+        if missing_ids:
+            return Response(
+                {
+                    "error": "Some documents were not found, not yours, or still processing.",
+                    "invalid_ids": list(missing_ids)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = compare_documents(question, owned_ids)
+
+        return Response({
+            "question": question,
+            "document_ids": owned_ids,
+            "agreements": result["agreements"],
+            "contradictions": result["contradictions"],
+            "unique_points": result["unique_points"],
+        })
