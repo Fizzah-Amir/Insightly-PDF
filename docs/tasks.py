@@ -33,13 +33,19 @@ def process_document(document_id):
 
             DocumentChunk.objects.create(
                 document=document,
-                content=chunk.page_content,
+                content=chunk.page_content.replace("\x00", ""),
+                page_number=chunk.metadata.get("page"),
                 embedding=embedding
             )
 
 
         document.status = Status.COMPLETED
         document.save()
+
+        # Fire concept extraction only after chunks+embeddings exist,
+        # since it reads from DocumentChunk.
+        from questions.tasks import extract_concepts_task
+        extract_concepts_task.delay(document.id)
 
 
     except Exception as e:
