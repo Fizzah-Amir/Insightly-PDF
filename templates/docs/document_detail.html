@@ -12,7 +12,7 @@
 </div>
 <div class="doc-meta mt-24" style="margin-bottom: 20px;">uploaded {{ document.uploaded_at|date:"d M Y, H:i" }}</div>
 
-{% if document.status != "completed" %}
+{% if document.status != "READY" %}
   <div class="alert alert-info">
     This document is still processing. Refresh this page in a moment — asking questions and concepts will be available once it's done.
   </div>

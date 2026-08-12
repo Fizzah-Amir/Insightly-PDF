@@ -15,13 +15,13 @@
         <div>
           <a href="{% url 'web_document_detail' document.id %}" class="doc-title">{{ document.title }}</a>
           <div class="doc-meta">
-            uploaded {{ document.uploaded_at|date:"d M Y, H:i" }}
+           {{ document.created_at|date:"d M Y, H:i" }}
             &middot;
             <span class="badge badge-{{ document.status }}">{{ document.get_status_display }}</span>
           </div>
         </div>
         <div class="doc-actions">
-          {% if document.status == "completed" %}
+          {% if document.status == "READY" %}
             <a href="{% url 'web_document_detail' document.id %}" class="btn btn-ghost btn-sm">Ask</a>
             <a href="{% url 'web_concepts' document.id %}" class="btn btn-ghost btn-sm">Concepts</a>
           {% endif %}
