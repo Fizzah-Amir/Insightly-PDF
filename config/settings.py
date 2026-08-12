@@ -37,6 +37,8 @@ CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+     "corsheaders",
+    "rest_framework.authtoken",
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -49,6 +51,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -59,7 +62,7 @@ MIDDLEWARE = [
 ]
 AUTH_USER_MODEL="users.User"
 ROOT_URLCONF = 'config.urls'
-
+CORS_ALLOW_ALL_ORIGINS = True
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -117,13 +120,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 REST_FRAMEWORK = {
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.BrowsableAPIRenderer",
-        "rest_framework.renderers.JSONRenderer",
+
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+
+        "rest_framework.authentication.TokenAuthentication",
+
     ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
+
 }
 TEMPLATES = [
     {

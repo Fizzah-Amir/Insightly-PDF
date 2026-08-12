@@ -6,8 +6,9 @@ from .models import Document
 class DocumentAdmin(admin.ModelAdmin):
     list_display=[
         "id",
+        "title",
         "owner",
         "file",
         "status",
-        "uploaded_at"
+        "created_at"
     ]

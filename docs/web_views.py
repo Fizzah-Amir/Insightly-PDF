@@ -11,7 +11,7 @@ from ai_engine.services import search_similar_chunks, generate_answer, compare_d
 def document_list(request):
     documents = Document.objects.filter(
         owner=request.user
-    ).order_by("-uploaded_at")
+    ).order_by("-created_at")
 
     return render(request, "docs/document_list.html", {
         "documents": documents,
@@ -55,7 +55,7 @@ def document_detail(request, document_id):
     if request.method == "POST":
         question = request.POST.get("question")
 
-        if document.status != Status.COMPLETED:
+        if document.status != Status.READY:
             messages.error(request, "This document is still processing — try again shortly.")
         elif question:
             chunks = search_similar_chunks(question, document.id)
@@ -88,8 +88,8 @@ def document_delete(request, document_id):
 def compare_view(request):
     documents = Document.objects.filter(
         owner=request.user,
-        status=Status.COMPLETED
-    ).order_by("-uploaded_at")
+        status=Status.READY
+    ).order_by("-created_at")
 
     result = None
     question = None

@@ -1,11 +1,12 @@
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from ai_engine.models import DocumentChunk
 from pgvector.django import CosineDistance
 import os
 import json
 from dotenv import load_dotenv
+
 from langchain_groq import ChatGroq
 import time
 load_dotenv()
@@ -19,37 +20,48 @@ def extract_pdf_text(file_path):
     return documents
 def split_documents(documents):
     splitter=RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200
+        chunk_size=800,
+        chunk_overlap=100
     )
     chunks=splitter.split_documents(
         documents
     )
     return chunks
 _embedding_model = None
+def get_embedding_model():
 
-def create_embedding_model():
     global _embedding_model
+
+
     if _embedding_model is None:
+
         _embedding_model = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+            model_name=
+            "sentence-transformers/all-MiniLM-L6-v2"
         )
+
+
     return _embedding_model
 def generate_embeddings(chunks):
 
-    embedding_model = create_embedding_model()
+    model = get_embedding_model()
 
-    texts = []
 
-    for chunk in chunks:
-        texts.append(chunk.page_content)
+    texts = [
+        chunk.page_content
+        for chunk in chunks
+    ]
 
-    embeddings = embedding_model.embed_documents(texts)
+
+    embeddings = model.embed_documents(
+        texts
+    )
+
 
     return embeddings
 def search_similar_chunks(question, document_id, k=5):
 
-    embedding_model = create_embedding_model()
+    embedding_model = get_embedding_model()
 
     question_embedding = embedding_model.embed_query(
         question
@@ -72,9 +84,9 @@ def get_llm(model="llama-3.1-8b-instant", temperature=0):
         model=model,
         temperature=temperature,
         groq_api_key=os.getenv("GROQ_API_KEY"),
-        max_retries=0
+        max_retries=5,
+        timeout=60
     )
-
 def generate_answer(question, chunks):
 
     context = "\n\n".join(
@@ -88,12 +100,11 @@ def generate_answer(question, chunks):
 You are an AI assistant for answering questions from documents.
 
 Use only the provided context. Each context block is labeled with its page number.
-If the answer is not present in context, say:
+If the answer is not present in the context, say exactly:
 "I could not find this information in the document."
 
 Context:
 {context}
-
 
 Question:
 {question}
@@ -103,10 +114,25 @@ Answer:
 
     response = llm.invoke(prompt)
 
-    sources = sorted({
-        chunk.page_number
-        for chunk in chunks
-        if chunk.page_number is not None
+    seen = set()
+    sources = []
+
+    for chunk in chunks:
+
+        page = chunk.page_number
+
+        if page is not None and page not in seen:
+
+            seen.add(page)
+
+            sources.append({
+                "page": page,
+                "text": chunk.content[:200]
+            })
+
+    print("AI RESPONSE =", {
+        "answer": response.content,
+        "sources": sources
     })
 
     return {
@@ -117,7 +143,7 @@ Answer:
 
 
 
-def extract_concepts_for_document(document, pages_per_batch=4):
+def extract_concepts_for_document(document, pages_per_batch=2):
 
     chunks = DocumentChunk.objects.filter(
         document=document
@@ -132,7 +158,6 @@ def extract_concepts_for_document(document, pages_per_batch=4):
 
     page_numbers = sorted(pages.keys())
 
-    # group pages into batches, e.g. [1,2,3,4], [5,6,7,8], ...
     batches = [
         page_numbers[i:i + pages_per_batch]
         for i in range(0, len(page_numbers), pages_per_batch)
@@ -159,7 +184,12 @@ Pages:
 {batch_text}
 """
 
-        concept_names_by_page = _call_llm_with_retry(llm, prompt)
+        raw_result = _call_llm_with_retry(llm, prompt)
+
+        concept_names_by_page = {}
+        for page_entry in raw_result.get("pages", []):
+            page_number = page_entry.get("page_number")
+            concept_names_by_page[page_number] = page_entry.get("concepts", [])
 
         for page_number, concept_names in concept_names_by_page.items():
             for name in concept_names:
@@ -167,45 +197,39 @@ Pages:
                     "page_number": page_number,
                     "name": name.strip()
                 })
-            time.sleep(5)
 
     return extracted
 
 
+
 def _call_llm_with_retry(llm, prompt, max_retries=5):
     """
-    Calls the LLM and parses {"pages": [...]}. Retries with increasing
+    Calls the LLM and parses JSON from its response. Retries with increasing
     wait time if Groq's rate limit (429) is hit, instead of failing.
+    Returns the raw parsed dict — callers extract whatever key they need.
     """
-
     for attempt in range(max_retries):
         try:
             response = llm.invoke(prompt)
-
             raw = response.content.strip()
             raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 
             try:
-                parsed = json.loads(raw)
+                return json.loads(raw)
             except (json.JSONDecodeError, AttributeError):
                 return {}
 
-            result = {}
-            for page_entry in parsed.get("pages", []):
-                page_number = page_entry.get("page_number")
-                result[page_number] = page_entry.get("concepts", [])
-
-            return result
-
         except Exception as e:
             if "429" in str(e) and attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 10   # 10s, 20s, 30s, 40s...
+                wait_time = (attempt + 1) * 10
                 time.sleep(wait_time)
                 continue
             else:
                 raise e
 
     return {}
+
+
 
 def compare_documents(question, document_ids):
 
@@ -258,91 +282,34 @@ If a category has nothing to report, return an empty list/object for it.
         "contradictions": parsed.get("contradictions", []),
         "unique_points": parsed.get("unique_points", {}),
     }
-
-
-def _call_llm_with_retry(llm, prompt, max_retries=5):
+def extract_concept_relationships(concept_names):
     """
-    Calls the LLM and parses {"pages": [...]}. Retries with increasing
-    wait time if Groq's rate limit (429) is hit, instead of failing.
+    Given a flat list of concept name strings, asks the LLM to find
+    meaningful relationships between them for a mindmap.
     """
 
-    for attempt in range(max_retries):
-        try:
-            response = llm.invoke(prompt)
+    if len(concept_names) < 2:
+        return []
 
-            raw = response.content.strip()
-            raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-
-            try:
-                parsed = json.loads(raw)
-            except (json.JSONDecodeError, AttributeError):
-                return {}
-
-            result = {}
-            for page_entry in parsed.get("pages", []):
-                page_number = page_entry.get("page_number")
-                result[page_number] = page_entry.get("concepts", [])
-
-            return result
-
-        except Exception as e:
-            if "429" in str(e) and attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 10   # 10s, 20s, 30s, 40s...
-                time.sleep(wait_time)
-                continue
-            else:
-                raise e
-
-    return {}
-
-def compare_documents(question, document_ids):
-
-    all_chunks = {}
-    for doc_id in document_ids:
-        all_chunks[doc_id] = search_similar_chunks(question, doc_id)
-
-    context = ""
-    for doc_id, chunks in all_chunks.items():
-        context += f"\n--- Document {doc_id} ---\n"
-        context += "\n".join(
-            f"[p.{chunk.page_number}] {chunk.content}"
-            for chunk in chunks
-        )
-        context += "\n"
-
-    llm = get_llm()
+    names_list = "\n".join(f"- {name}" for name in concept_names)
 
     prompt = f"""
-You are comparing excerpts from multiple documents to answer a question.
+Given this list of concepts extracted from a document:
+{names_list}
 
-Question:
-{question}
+Identify meaningful relationships between them (e.g. "prerequisite of",
+"part of", "related to", "example of", "leads to").
 
-Excerpts:
-{context}
+Only include relationships that make clear conceptual sense — do not
+force connections between unrelated concepts.
 
-Compare the excerpts across documents and return ONLY valid JSON, no markdown fences, in this exact format:
-{{
-  "agreements": ["point where documents agree, mention doc + page"],
-  "contradictions": ["point where documents conflict, mention doc + page"],
-  "unique_points": {{"Document <id>": ["point only found in this document"]}}
-}}
+Return ONLY valid JSON, no markdown fences:
+{{"edges": [{{"from": "Concept A", "to": "Concept B", "relationship": "prerequisite of"}}]}}
 
-If a category has nothing to report, return an empty list/object for it.
+Limit to at most 15 of the most important relationships.
 """
 
-    response = llm.invoke(prompt)
+    llm = get_llm()
+    parsed = _call_llm_with_retry(llm, prompt)
 
-    raw = response.content.strip()
-    raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-
-    try:
-        parsed = json.loads(raw)
-    except (json.JSONDecodeError, AttributeError):
-        parsed = {}
-
-    return {
-        "agreements": parsed.get("agreements", []),
-        "contradictions": parsed.get("contradictions", []),
-        "unique_points": parsed.get("unique_points", {}),
-    }
+    return parsed.get("edges", [])

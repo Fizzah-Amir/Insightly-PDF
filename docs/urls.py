@@ -1,37 +1,57 @@
 from django.urls import path
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView
+)
 from .views import (
     DocumentUploadAPIView,
-    DocumentAskAPIView,
+    GenerateMindMapAPIView,
     DocumentListAPIView,
-    DocumentDetailAPIView,
-    DocumentDeleteAPIView,
-    DocumentCompareAPIView
+)
+from .chat_views import (
+    CreateConversationAPIView,
+    ChatHistoryAPIView,
+    ChatMessageAPIView
 )
 
 urlpatterns = [
+     path(
+        "api/token/",
+        TokenObtainPairView.as_view()
+    ),
 
     path(
-        "upload/",
-        DocumentUploadAPIView.as_view()
+        "api/token/refresh/",
+        TokenRefreshView.as_view()
     ),
-    path(
-        "compare/",
-        DocumentCompareAPIView.as_view()
-    ),
-    path(
-    "<int:document_id>/ask/",
-    DocumentAskAPIView.as_view()
-    ),
-    path(
-    "<int:document_id>/",
-    DocumentDetailAPIView.as_view()
-),
-    path(
+ path(
         "",
         DocumentListAPIView.as_view()
     ),
-    path(
-    "<int:document_id>/delete/",
-    DocumentDeleteAPIView.as_view()
+
+path(
+    "upload/",
+    DocumentUploadAPIView.as_view()
 ),
+
+
+path(
+    "<int:id>/mindmap/",
+    GenerateMindMapAPIView.as_view()
+),
+
+path(
+    "chat/message/",
+    ChatMessageAPIView.as_view()
+),
+path(
+        "chat/start/",
+        CreateConversationAPIView.as_view()
+    ),
+
+    path(
+        "chat/history/<int:document_id>/",
+        ChatHistoryAPIView.as_view()
+    ),
+
 ]

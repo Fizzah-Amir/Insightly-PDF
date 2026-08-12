@@ -20,6 +20,8 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),
     path("app/", include("config.web_urls")),
     path("", RedirectView.as_view(pattern_name="web_document_list", permanent=False)),
+     path("api/users/", include("users.urls")),
+     
 ]
 if settings.DEBUG:
     urlpatterns += static(
