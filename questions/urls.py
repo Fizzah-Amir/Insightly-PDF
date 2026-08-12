@@ -1,9 +1,11 @@
-from django.urls import path
-from .views import ConceptListAPIView
+from .views import MindMapAPIView
+from django.urls import path, include
 
-urlpatterns = [
-    path(
-        "<int:document_id>/concepts/",
-        ConceptListAPIView.as_view()
-    ),
+urlpatterns=[
+
+path(
+"mindmap/<int:document_id>/",
+MindMapAPIView.as_view()
+)
+
 ]
